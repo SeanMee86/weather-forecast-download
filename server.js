@@ -46,7 +46,6 @@ function generatePdf(image) {
             .text(`Weather Forecast Information`, {
                 align: 'center'
             })
-        doc.moveDown()
         doc.fontSize(20)
             .text(formattedDate, {
                 align: 'center'
