@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "axios": "^0.26.0"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
