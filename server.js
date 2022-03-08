@@ -1,10 +1,21 @@
 const fs = require('fs');
 const Axios = require('axios');
-const images = require('images');
+const PDFDocument = require('pdfkit');
 
-const url = 'https://forecast.weather.gov/meteograms/Plotter.php?lat=37.4353&lon=-122.0712&wfo=MTR&zcode=CAZ508&gset=18&gdiff=3&unit=0&tinfo=PY8&ahour=0&pcmd=10000010100000000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6'
 const today = new Date(),
-options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' },
+    formattedDate = today.toLocaleDateString('en-US', options),
+    datedFileName = `${__dirname}\\weather-forecast-${formattedDate}`,
+    url = 'https://forecast.weather.gov/meteograms/Plotter.php?lat=37.4353&lon=-122.0712&wfo=MTR&zcode=CAZ508&gset=18&gdiff=3&unit=0&tinfo=PY8&ahour=0&pcmd=10000010100000000000000000000000000000000000000000000000000&lg=en&indu=1!1!1!&dd=&bw=&hrspan=48&pqpfhr=6&psnwhr=6'
+
+
+downloadImage(url, `${datedFileName}.png`)
+    .then(_ => {
+        generatePdf(`${datedFileName}.png`)
+            .then(_ => {
+                fs.unlinkSync(`${datedFileName}.png`)
+            });
+    })
 
 async function downloadImage(url, filepath) {
     const response = await Axios({
@@ -19,17 +30,34 @@ async function downloadImage(url, filepath) {
     });
 }
 
-downloadImage(url, `${__dirname}\\weather-forecast-${today.toLocaleDateString('en-US', options)}.png`)
-    .then(res => {
-        const coords = images('./images/coords.png')
-        const graph = images(res);
-        const height = coords.height();
-        const width = (graph.width() - coords.width())/2
-        images(graph.width(), height + graph.height())
-            .fill(255, 255, 255)
-            .draw(coords, width, 0)
-            .draw(graph, 0, height)
-            .save(`${__dirname}\\weather-forecast-${today.toLocaleDateString('en-US', options)}.png`)
-    })
+function generatePdf(image) {
+    return new Promise(((resolve, reject) => {
+        const doc = new PDFDocument();
+        doc.pipe(fs.createWriteStream(`${datedFileName}.pdf`))
+            .on('error', reject)
+            .once('close', () => resolve())
+        doc.fontSize(20)
+            .text(`Weather Forecast Information`, {
+                align: 'center'
+            })
+        doc.moveDown()
+        doc.fontSize(20)
+            .text(formattedDate, {
+                align: 'center'
+            })
+        doc.moveDown()
+        doc.fontSize(12)
+            .fillColor('blue')
+            .text('https://forecast.weather.gov/MapClick.php?w0=t&w3u=1&w5=pop&w7=rain&w14u=1&w15u=1&AheadHour=0&Submit=Submit&FcstType=graphical&textField1=37.4353&textField2=-122.0712&site=all&unit=0&dd=&bw=', {
+                link: 'https://forecast.weather.gov/MapClick.php?w0=t&w3u=1&w5=pop&w7=rain&w14u=1&w15u=1&AheadHour=0&Submit=Submit&FcstType=graphical&textField1=37.4353&textField2=-122.0712&site=all&unit=0&dd=&bw='
+            })
+        doc.moveDown()
+        doc.image(image, {
+            fit: [500, 500],
+            align: 'center',
+        });
+        doc.end();
+    }))
+}
 
 
